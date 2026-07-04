@@ -32,7 +32,7 @@ minio:
 
 mlflow:
   name: mlflow-server
-  replicas: 1
+  replicas: 2
   image: ghcr.io/mlflow/mlflow:latest
 
   port: 5000
