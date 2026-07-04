@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.mlflow.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.mlflow.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.mlflow.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.mlflow.name }}
+    spec:
+      containers:
+      - name: mlflow
+        image: {{ .Values.mlflow.image }}
+        command:
+        - mlflow
+        - server
+        args:
+        - --backend-store-uri=postgresql://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ .Values.mlflow.backendStore.host }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.mlflow.backendStore.port }}/{{ .Values.mlflow.backendStore.db }}
+        - --default-artifact-root=s3://{{ .Values.mlflow.artifactStore.bucket }}/
+        - --host=0.0.0.0
+        - --port={{ .Values.mlflow.port }}
+        - --allowed-hosts={{ .Values.mlflow.allowedHosts }}
+        env:
+        - name: MLFLOW_S3_ENDPOINT_URL
+          value: http://{{ .Values.mlflow.artifactStore.endpoint }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.mlflow.artifactStore.port }}
+        - name: AWS_ACCESS_KEY_ID
+          value: {{ .Values.minio.accessKey }}
+        - name: AWS_SECRET_ACCESS_KEY
+          value: {{ .Values.minio.secretKey }}
+        - name: MLFLOW_DISABLE_HOST_CHECK
+          value: "true"
+        ports:
+        - containerPort: {{ .Values.mlflow.port }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.mlflow.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: NodePort
+  selector:
+    app: {{ .Values.mlflow.name }}
+  ports:
+  - port: {{ .Values.mlflow.port }}
+    targetPort: {{ .Values.mlflow.port }}
+    nodePort: {{ .Values.mlflow.nodePort }}

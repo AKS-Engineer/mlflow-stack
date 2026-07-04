@@ -1,0 +1,51 @@
+postgres:
+  name: mlflow-postgres
+  replicas: 1
+  image: postgres:15
+  db: mlflow
+  user: mlflow
+  password: mlflow123
+
+
+minio:
+  name: mlflow-minio
+  replicas: 1
+  image: minio/minio:latest
+
+  port: 9000
+  consolePort: 9001
+
+  accessKey: mlflow
+  secretKey: mlflow123
+
+# Persistent storage configuration for MinIO.
+# Currently unused because the lab does not have a CSI driver or NFS/hostPath PVs.
+# Keep this block for future expansion (NFS server, Longhorn, Rook/Ceph, or VM-backed MinIO).
+  storage:
+    enabled: false        # your manifest uses emptyDir
+    size: 10Gi
+    class: standard
+    accessMode: ReadWriteOnce
+
+  mountPath: /data
+
+
+mlflow:
+  name: mlflow-server
+  replicas: 1
+  image: ghcr.io/mlflow/mlflow:latest
+
+  port: 5000
+  nodePort: 32000
+
+  backendStore:
+    host: mlflow-postgres
+    port: 5432
+    db: mlflow
+
+  artifactStore:
+    bucket: mlflow
+    endpoint: mlflow-minio
+    port: 9000
+
+  allowedHosts: "mlflow.company.com,your-custom-domain.internal:5000,192.168.1.50,localhost:*,k8s-config.mylab.io"
